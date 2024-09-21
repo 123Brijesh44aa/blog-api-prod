@@ -9,8 +9,9 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 enum Role {
@@ -91,6 +92,9 @@ model Post {
   media         Media[] // one to many with media
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+
+  @@index([authorId])
+  @@index([categoryId])
 }
 
 model Comment {
@@ -102,6 +106,9 @@ model Comment {
   userId    String
   user      User          @relation(fields: [userId], references: [id]) // many to one with User
   createdAt DateTime      @default(now())
+
+  @@index([postId])
+  @@index([userId])
 }
 
 model Tag {
@@ -120,6 +127,8 @@ model PostTag {
   tag  Tag  @relation(fields: [tagId], references: [id])
 
   @@id([postId, tagId]) // Composite primary key
+  @@index([postId])
+  @@index([tagId])
 }
 
 model Category {
@@ -139,6 +148,9 @@ model Like {
   userId    String
   user      User     @relation(fields: [userId], references: [id]) // many to one with User
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([postId])
 }
 
 model Media {
@@ -149,6 +161,8 @@ model Media {
   postId    String
   post      Post      @relation(fields: [postId], references: [id]) // many to one with Post
   createdAt DateTime  @default(now())
+
+  @@index([postId])
 }
 
 model Subscription {
@@ -160,6 +174,7 @@ model Subscription {
   createdAt    DateTime @default(now())
 
   @@unique([subscriberId, authorId]) // Prevent duplicate subscriptions
+  @@index([authorId])
 }
 
 model Notification {
@@ -169,6 +184,8 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id]) // many to one with User
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model AuditLog {
@@ -179,4 +196,6 @@ model AuditLog {
   entityType String // entity affected (e.g, post, user)
   entityId   String // id of the affected entity
   createdAt  DateTime @default(now())
+
+  @@index([userId])
 }
