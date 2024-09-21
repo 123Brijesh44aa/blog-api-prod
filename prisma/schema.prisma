@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  AUTHOR
+  READER
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum CommentStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(READER)
+  isActive      Boolean        @default(true)
+  lastLogin     DateTime?
+  profile       Profile? // one-to-one with profile
+  posts         Post[] // one-to-many with Post
+  comments      Comment[] // one-to-many with Comment
+  likes         Like[] // one-to-many with like
+  notifications Notification[] // one-to-many with notification
+  subscriptions Subscription[] @relation("Subscriber") // Subscriptions make by the user
+  subscribers   Subscription[] @relation("Author") // Users who subscribed to this user
+  auditLogs     AuditLog[] // one-to-many with AuditLog
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([email]) // index on email for faster lookups
+}
+
+model Profile {
+  id             String   @id @default(uuid())
+  bio            String?
+  profilePicture String?
+  socialLinks    Json // json for social media links
+  location       String?
+  website        String?
+  userId         String   @unique // one to one with User
+  user           User     @relation(fields: [userId], references: [id]) // Reference back to User
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Post {
+  id            String     @id @default(uuid())
+  title         String
+  content       String
+  slug          String     @unique
+  status        PostStatus @default(DRAFT)
+  viewCount     Int        @default(0)
+  excerpt       String?
+  featuredImage String?
+  readingTime   Int // Estimated reading time in minutes
+  authorId      String
+  author        User       @relation(fields: [authorId], references: [id]) // many to one with User (Author)
+  categoryId    String
+  category      Category   @relation(fields: [categoryId], references: [id]) // Many to one with Category
+  comments      Comment[] // one to many with Comment
+  tags          PostTag[] // many to many with Tag via PostTag
+  likes         Like[] // one to many with Like
+  media         Media[] // one to many with media
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Comment {
+  id        String        @id @default(uuid())
+  content   String
+  status    CommentStatus @default(PENDING)
+  postId    String
+  post      Post          @relation(fields: [postId], references: [id]) // many to one with Post
+  userId    String
+  user      User          @relation(fields: [userId], references: [id]) // many to one with User
+  createdAt DateTime      @default(now())
+}
+
+model Tag {
+  id    String    @id @default(uuid())
+  name  String
+  slug  String    @unique
+  posts PostTag[] // many to many with Post via PostTag
+}
+
+// PostTag ( pivot table for many to many relation between Post and Tag )
+model PostTag {
+  postId String
+  tagId  String
+
+  post Post @relation(fields: [postId], references: [id])
+  tag  Tag  @relation(fields: [tagId], references: [id])
+
+  @@id([postId, tagId]) // Composite primary key
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  posts       Post[] // one to many with Post
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id]) // Many to one with Post
+  userId    String
+  user      User     @relation(fields: [userId], references: [id]) // many to one with User
+  createdAt DateTime @default(now())
+}
+
+model Media {
+  id        String    @id @default(uuid())
+  url       String
+  type      MediaType
+  size      Int
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id]) // many to one with Post
+  createdAt DateTime  @default(now())
+}
+
+model Subscription {
+  id           String   @id @default(uuid())
+  subscriberId String
+  subscriber   User     @relation("Subscriber", fields: [subscriberId], references: [id]) // many to one with User ( Subscriber )
+  authorId     String
+  author       User     @relation("Author", fields: [authorId], references: [id]) // many to one with User ( Author )
+  createdAt    DateTime @default(now())
+
+  @@unique([subscriberId, authorId]) // Prevent duplicate subscriptions
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id]) // many to one with User
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id]) // many to one with User
+  action     String // Action description (e.g., login, post_edit, post_Delete)
+  entityType String // entity affected (e.g, post, user)
+  entityId   String // id of the affected entity
+  createdAt  DateTime @default(now())
+}
