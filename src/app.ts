@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import helmet from "helmet";
+import {router as authRouter}  from "./routes/authRoutes.route";
 
 const app = express();
 
@@ -15,9 +16,14 @@ app.use(helmet());
 
 // todo: Rate Limiter
 
-// todo : Data Sanitization against
+// todo : Data Sanitization against MySQL query injection ( don't worry prisma uses Parameterized queries by default )
+
+// todo: Data Sanitization against XSS
 
 // todo: Prevent Parameter Pollution using hpp
+
+
+app.use("/api/v2/blog", authRouter);
 
 
 export default app;
