@@ -1,5 +1,6 @@
 import {PrismaClientKnownRequestError} from "prisma/prisma-client/runtime/library";
 import {NextFunction, Request, Response} from "express";
+import {BlogError} from "../utils/BlogError";
 
 // Prisma specific error handling
 const handlePrismaError = (error: PrismaClientKnownRequestError) => {

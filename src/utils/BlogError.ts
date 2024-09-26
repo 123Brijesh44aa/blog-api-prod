@@ -20,3 +20,5 @@ class BlogError extends Error {
         Error.captureStackTrace(this,this.constructor);
     }
 }
+
+export {BlogError};

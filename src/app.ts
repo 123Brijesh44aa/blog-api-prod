@@ -3,6 +3,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import helmet from "helmet";
 import {router as authRouter}  from "./routes/authRoutes.route";
+import {errorHandlerMiddleware} from "./middlewares/errorHandler.middleware";
 
 const app = express();
 
@@ -24,6 +25,8 @@ app.use(helmet());
 
 
 app.use("/api/v2/blog", authRouter);
+
+app.use(errorHandlerMiddleware);
 
 
 export default app;
