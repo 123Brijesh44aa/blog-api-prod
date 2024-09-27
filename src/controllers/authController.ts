@@ -4,6 +4,7 @@ import {BlogError} from "../utils/BlogError";
 import xss from "xss";
 import prismaClient from "../prismaClient";
 import bcrypt from "bcryptjs";
+import {checkPassword} from "../utils/checkPassword.util";
 
 
 const signupUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -80,7 +81,30 @@ const signupUser = async (req: Request, res: Response, next: NextFunction) => {
     } catch (error) {
         next(error);
     }
-
 }
 
-export {signupUser};
+
+const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        let {email, password} = req.body;
+        if (!email){
+            return next(new BlogError("email is required",400));
+        }
+        email = xss(email);
+        const user = await prismaClient.user.findUnique({
+            where: {email: email},
+        });
+        if (!user){
+            return next(new BlogError("Invalid email or password", 401));
+        }
+        const isPasswordMatch = await checkPassword(password, user.password);
+        if (!isPasswordMatch){
+            return next(new BlogError("Invalid email or password", 401));
+        }
+
+    } catch (error){
+        next(error);
+    }
+}
+
+export {signupUser, loginUser};
