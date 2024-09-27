@@ -6,7 +6,7 @@ import prismaClient from "../prismaClient";
 import bcrypt from "bcryptjs";
 
 
-const signupUser = async (req: Request,res: Response, next: NextFunction) => {
+const signupUser = async (req: Request, res: Response, next: NextFunction) => {
 
     /**
      * get user details from request
@@ -23,17 +23,23 @@ const signupUser = async (req: Request,res: Response, next: NextFunction) => {
      */
 
     try {
+        let {name, email, password} = req.body;
+
+        if (
+            [name, email, password].some((field) => field?.trim() === "")
+        ) {
+            return next(new BlogError("All fields are required", 400));
+        }
 
         // Data Sanitization against XSS
-        req.body.name = xss(req.body.name);
-        req.body.email = xss(req.body.email);
+        name = xss(name);
+        email = xss(email);
 
         // Data Validation using Joi
         const {error} = signupSchema.validate(req.body);
         if (error) return next(new BlogError(error.details[0].message, 400));
 
         // Check if user already exist
-        const {name,email,password} = req.body;
         const user = await prismaClient.user.findUnique({
             where: {email: email},
         });
@@ -52,24 +58,26 @@ const signupUser = async (req: Request,res: Response, next: NextFunction) => {
             }
         });
 
+        // Remove password and refreshToken from the newly created User
+        const {password: _, refreshToken: __, ...userWithoutSensitiveInfo} = newUser;
+
+        const createdUser = await prismaClient.user.findUnique({
+            where: {id: newUser.id},
+        });
+
         // Check if user Created or not
-        if (newUser){
-            return res.status(201).json(
-                {
-                    message: "User created successfully",
-                    newUser: newUser,
-                    user: {
-                        id: newUser.id,
-                        name: newUser.name,
-                        email: newUser.email,
-                    },
-                }
-            );
-        } else {
-            return next(new BlogError("User creation failed", 500));
+        if (!createdUser) {
+            return next(new BlogError("Something went wrong while registering the User", 500));
         }
 
-    } catch (error){
+        return res.status(201).json(
+            {
+                message: "User created successfully",
+                user: userWithoutSensitiveInfo,
+            }
+        );
+
+    } catch (error) {
         next(error);
     }
 

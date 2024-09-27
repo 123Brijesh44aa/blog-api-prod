@@ -53,6 +53,8 @@ model User {
   subscriptions Subscription[] @relation("Subscriber") // Subscriptions make by the user
   subscribers   Subscription[] @relation("Author") // Users who subscribed to this user
   auditLogs     AuditLog[] // one-to-many with AuditLog
+  accessToken   String?
+  refreshToken  String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
