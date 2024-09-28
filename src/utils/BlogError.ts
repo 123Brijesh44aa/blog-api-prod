@@ -1,4 +1,4 @@
-class BlogError extends Error {
+export class BlogError extends Error {
     public statusCode: number;
     public status: string;
     public isOperational: boolean;
@@ -20,5 +20,3 @@ class BlogError extends Error {
         Error.captureStackTrace(this,this.constructor);
     }
 }
-
-export {BlogError};

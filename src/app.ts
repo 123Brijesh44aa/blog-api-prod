@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import helmet from "helmet";
 import {router as authRouter}  from "./routes/authRoutes.route";
 import {errorHandlerMiddleware} from "./middlewares/errorHandler.middleware";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
@@ -11,7 +12,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
-
+app.use(cookieParser());
 // Set Security HTTP headers: helmet is a package which will set some http headers for security reasons
 app.use(helmet());
 
