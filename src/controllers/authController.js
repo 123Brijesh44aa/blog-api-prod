@@ -1,14 +1,17 @@
-import {NextFunction, Request, Response} from "express";
-import {signupSchema} from "../validation/authValidation";
-import {BlogError} from "../utils/BlogError";
+import {signupSchema} from "../validation/authValidation.js";
+import {BlogError} from "../utils/BlogError.js";
 import xss from "xss";
-import prismaClient from "../prismaClient";
+import prismaClient from "../prismaClient.js";
 import bcrypt from "bcryptjs";
-import {checkPassword} from "../utils/checkPassword.util";
-import {generateAccessAndRefreshTokens} from "../services/generateAccessAndRefreshTokens.service";
+import {checkPassword} from "../utils/checkPassword.util.js";
+import {generateAccessAndRefreshTokens} from "../services/generateAccessAndRefreshTokens.service.js";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
 
-const signupUser = async (req: Request, res: Response, next: NextFunction) => {
+dotenv.configDotenv();
+
+const signupUser = async (req, res, next) => {
 
     /**
      * get user details from request
@@ -85,28 +88,28 @@ const signupUser = async (req: Request, res: Response, next: NextFunction) => {
 }
 
 
-const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+const loginUser = async (req, res, next) => {
     try {
         let {email, password} = req.body;
-        if (!email){
-            return next(new BlogError("email is required",400));
+        if (!email) {
+            return next(new BlogError("email is required", 400));
         }
         email = xss(email);
         const user = await prismaClient.user.findUnique({
             where: {email: email},
         });
-        if (!user){
+        if (!user) {
             return next(new BlogError("Invalid email or password", 401));
         }
         const isPasswordMatch = await checkPassword(password, user.password);
-        if (!isPasswordMatch){
+        if (!isPasswordMatch) {
             return next(new BlogError("Invalid email or password", 401));
         }
         const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user.id);
 
         // here we are fetching the user from the database again to remove the password and refreshToken from the response, but now you will ask that we already have the user object in the user variable, so why we are fetching it again from the database? the reason is that the user object does not have the password and refreshToken fields because the user object contains the previous reference of the user object which was fetched from the database, so we need to fetch the user object again from the database to get the updated user object which contains the password and refreshToken fields.
         const loggedInUser = await prismaClient.user.findUnique({
-            where: { id: user.id },
+            where: {id: user.id},
         });
 
         // remove password and refreshToken from loggedInUser
@@ -122,7 +125,7 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
             secure: true,
         }
 
-        return  res
+        return res
             .status(200)
             .cookie("accessToken", accessToken, options)
             .cookie("refreshToken", refreshToken, options)
@@ -135,22 +138,22 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
                 }
             )
 
-    } catch (error){
+    } catch (error) {
         next(error);
     }
 }
 
 
-const logoutUser = async (req: Request, res: Response, next: NextFunction) => {
+const logoutUser = async (req, res, next) => {
     try {
         const user = req.user;
-        if (!user){
+        if (!user) {
             return next(new BlogError("User not found", 404));
         }
 
         await prismaClient.user.update({
-            where: { id: user.id },
-            data: { refreshToken: null },
+            where: {id: user.id},
+            data: {refreshToken: null},
         });
 
         const options = {
@@ -164,9 +167,55 @@ const logoutUser = async (req: Request, res: Response, next: NextFunction) => {
             .clearCookie("refreshToken", options)
             .json({message: "User logged out successfully"});
 
-    } catch (error){
+    } catch (error) {
         next(error);
     }
 }
 
-export {signupUser, loginUser, logoutUser};
+
+const refreshAccessToken = async (req, res, next) => {
+    try {
+        const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+        if (!incomingRefreshToken) {
+            return next(new BlogError("Unauthorized request", 401));
+        }
+
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+        const user = await prismaClient.user.findUnique({
+            where: {id: decodedToken?.id},
+        });
+
+        if (!user) {
+            return next(new BlogError("Invalid Refresh Token", 404));
+        }
+
+        if (incomingRefreshToken !== user?.refreshToken) {
+            return next(new BlogError("Refresh token is expired or used", 401));
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: true
+        };
+
+        const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user.id);
+
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", newRefreshToken, options)
+            .json(
+                {
+                    message: "Access token refreshed",
+                    accessToken: accessToken,
+                    refreshToken: newRefreshToken,
+                }
+            )
+    } catch (error) {
+        next(error);
+    }
+
+}
+export {signupUser, loginUser, logoutUser, refreshAccessToken};

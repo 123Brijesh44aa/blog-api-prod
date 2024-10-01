@@ -1,9 +1,9 @@
-import {BlogError} from "../utils/BlogError";
-import prismaClient from "../prismaClient";
-import {generateAccessToken} from "./generateAccessToken.service";
-import {generateRefreshToken} from "./generateRefreshToken.service";
+import {BlogError} from "../utils/BlogError.js";
+import prismaClient from "../prismaClient.js";
+import {generateAccessToken} from "./generateAccessToken.service.js";
+import {generateRefreshToken} from "./generateRefreshToken.service.js";
 
-export const generateAccessAndRefreshTokens = async (userId: string) => {
+export const generateAccessAndRefreshTokens = async (userId) => {
     try {
         const user = await prismaClient.user.findUnique({
             where: {id: userId},

@@ -1,12 +1,11 @@
-import {Request, Response, NextFunction} from "express";
-import {BlogError} from "../utils/BlogError";
+import {BlogError} from "../utils/BlogError.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import prismaClient from "../prismaClient";
+import prismaClient from "../prismaClient.js";
 
 dotenv.configDotenv();
 
-export const verifyJWT = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyJWT = async (req, res, next) => {
 
     try {
         const access_token_secret = process.env.ACCESS_TOKEN_SECRET;
@@ -20,7 +19,7 @@ export const verifyJWT = async (req: Request, res: Response, next: NextFunction)
             return next(new BlogError("Unauthorized request", 401));
         }
 
-        const decodedToken = jwt.verify(token, access_token_secret) as jwt.JwtPayload;
+        const decodedToken = jwt.verify(token, access_token_secret);
 
         const user = await prismaClient.user.findUnique({
             where: {id: decodedToken?.id},

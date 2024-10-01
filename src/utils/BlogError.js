@@ -1,9 +1,9 @@
 export class BlogError extends Error {
-    public statusCode: number;
-    public status: string;
-    public isOperational: boolean;
+     statusCode;
+     status;
+     isOperational;
 
-    constructor(message: string, statusCode: number) {
+    constructor(message, statusCode) {
         super(message);
         this.statusCode = statusCode
 

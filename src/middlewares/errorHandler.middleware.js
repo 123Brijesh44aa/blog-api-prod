@@ -1,9 +1,8 @@
-import {PrismaClientKnownRequestError} from "prisma/prisma-client/runtime/library";
-import {NextFunction, Request, Response} from "express";
-import {BlogError} from "../utils/BlogError";
+import {PrismaClientKnownRequestError} from "prisma/prisma-client/runtime/library.js";
+import {BlogError} from "../utils/BlogError.js";
 
 // Prisma specific error handling
-const handlePrismaError = (error: PrismaClientKnownRequestError) => {
+const handlePrismaError = (error) => {
     let message;
 
     if (error.code === "P2002"){
@@ -13,7 +12,7 @@ const handlePrismaError = (error: PrismaClientKnownRequestError) => {
     return new BlogError("Database operation failed", 500);
 };
 
-export const errorHandlerMiddleware = (error: any, req: Request, res: Response, next: NextFunction) => {
+export const errorHandlerMiddleware = (error, req, res, next) => {
     // Prisma Errors
     if (error instanceof PrismaClientKnownRequestError){
         error = handlePrismaError(error);

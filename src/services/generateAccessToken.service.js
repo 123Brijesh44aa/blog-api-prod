@@ -1,4 +1,3 @@
-import {User} from "@prisma/client";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
@@ -12,7 +11,7 @@ if (!access_token_secret || !access_token_expiry) {
     throw new Error("ACCESS_TOKEN_SECRET or ACCESS TOKEN EXPIRY is not defined in .env");
 }
 
-export const generateAccessToken = (user: User): string => {
+export const generateAccessToken = (user) => {
     return jwt.sign(
         {
             id: user.id,

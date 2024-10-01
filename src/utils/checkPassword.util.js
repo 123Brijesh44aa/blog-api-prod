@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import {BlogError} from "./BlogError";
+import {BlogError} from "./BlogError.js";
 
-export const checkPassword = async (inputPassword: string, storedPassword: string): Promise<boolean> => {
+export const checkPassword = async (inputPassword, storedPassword) => {
     try {
         return await bcrypt.compare(inputPassword, storedPassword);
     } catch (error){
