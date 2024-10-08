@@ -9,7 +9,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
 
-dotenv.configDotenv();
+dotenv.configDotenv(); 
 
 const signupUser = async (req, res, next) => {
 
@@ -157,7 +157,7 @@ const logoutUser = async (req, res, next) => {
         });
 
         const options = {
-            httpOnly: true,
+            httpOnly: true, 
             secure: true,
         }
 

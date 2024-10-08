@@ -38,24 +38,26 @@ enum MediaType {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  password      String
-  role          Role           @default(READER)
-  isActive      Boolean        @default(true)
-  lastLogin     DateTime?
-  profile       Profile? // one-to-one with profile
-  posts         Post[] // one-to-many with Post
-  comments      Comment[] // one-to-many with Comment
-  likes         Like[] // one-to-many with like
-  notifications Notification[] // one-to-many with notification
-  subscriptions Subscription[] @relation("Subscriber") // Subscriptions make by the user
-  subscribers   Subscription[] @relation("Author") // Users who subscribed to this user
-  auditLogs     AuditLog[] // one-to-many with AuditLog
-  refreshToken  String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                String         @id @default(uuid())
+  name              String
+  email             String         @unique
+  password          String
+  role              Role           @default(READER)
+  isActive          Boolean        @default(true)
+  isVerified        Boolean        @default(false)
+  verificationToken String?
+  lastLogin         DateTime?
+  profile           Profile? // one-to-one with profile
+  posts             Post[] // one-to-many with Post
+  comments          Comment[] // one-to-many with Comment
+  likes             Like[] // one-to-many with like
+  notifications     Notification[] // one-to-many with notification
+  subscriptions     Subscription[] @relation("Subscriber") // Subscriptions make by the user
+  subscribers       Subscription[] @relation("Author") // Users who subscribed to this user
+  auditLogs         AuditLog[] // one-to-many with AuditLog
+  refreshToken      String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@index([email]) // index on email for faster lookups
 }
