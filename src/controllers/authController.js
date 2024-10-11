@@ -50,7 +50,44 @@ const signupUser = async (req, res, next) => {
         const user = await prismaClient.user.findUnique({
             where: { email: email },
         });
-        if (user) return next(new BlogError("User with this email already exists", 400));
+        if (user) {
+            // if user already exists and not verified
+            if (!user.isVerified) {
+                // check if user VerificationToken is not null
+                if (user.verificationToken != null) {
+                    try {
+                        // check if existing verification token is still valid
+                        jwt.verify(user.verificationToken, process.env.EMAIL_VERIFICATION_TOKEN_SECRET)
+                        // if token is still valid, inform user
+                        return res.status(200).json({
+                            message: "A verification email has already been sent. Please check your email inbox."
+                        });
+                    } catch (error) {
+                        if (error.name == "TokenExpiredError") {
+                            // if the token has expired , generate a new one
+                            const verificationToken = generateVerificationToken(user.email);
+                            // save token to User record
+                            await prismaClient.user.update({
+                                where: { id: user.id },
+                                data: { verificationToken: verificationToken }
+                            });
+                            // Resend Verification Email 
+                            const updatedUserWithVerificationToken = await prismaClient.user.findUnique({
+                                where: { id: user.id },
+                            });
+                            sendVerificationEmail(updatedUserWithVerificationToken);
+
+                            return res.status(200).json({
+                                message: 'The previous verification link has expired. A new verification email has been sent.'
+                            });
+                        }
+                        // Handle other errors related to token verification
+                        return res.status(500).json({ message: 'Something went wrong with the verification process.' });
+                    }
+                }
+            }
+            return next(new BlogError("User with this email already exists", 400));
+        }
 
         // Hash the password using bcryptjs
         const salt = await bcrypt.genSalt(10);
@@ -125,9 +162,9 @@ const loginUser = async (req, res, next) => {
 
 
         // check if email is verified or not
-        if(!user.isVerified){
+        if (!user.isVerified) {
             return next(new BlogError("Please verify your email to login", 401));
-        }    
+        }
 
         const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user.id);
 
