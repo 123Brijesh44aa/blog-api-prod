@@ -166,6 +166,12 @@ const loginUser = async (req, res, next) => {
             return next(new BlogError("Please verify your email to login", 401));
         }
 
+        // update the lastLogin field
+        await prismaClient.user.update({
+            where : { id: user.id },
+            data: { lastLogin: new Date() }
+        });
+
         const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user.id);
 
         // here we are fetching the user from the database again to remove the password and refreshToken from the response, but now you will ask that we already have the user object in the user variable, so why we are fetching it again from the database? the reason is that the user object does not have the password and refreshToken fields because the user object contains the previous reference of the user object which was fetched from the database, so we need to fetch the user object again from the database to get the updated user object which contains the password and refreshToken fields.

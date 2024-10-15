@@ -3,6 +3,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import helmet from "helmet";
 import {router as authRouter}  from "./routes/authRoutes.route.js";
+import {router as emailRouter} from "./routes/emailRoutes.route.js";
 import cookieParser from "cookie-parser";
 import {errorHandlerMiddleware} from "./middlewares/errorHandler.middleware.js";
 import dotenv from "dotenv";
@@ -36,6 +37,7 @@ app.use(helmet());
 
 
 app.use('/api/v2/blog', authRouter);
+app.use('/api/v2/blog', emailRouter);
 
 app.use(errorHandlerMiddleware);
 
