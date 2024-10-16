@@ -46,6 +46,7 @@ model User {
   isActive          Boolean        @default(true)
   isVerified        Boolean        @default(false)
   verificationToken String?
+  resetToken        String?
   lastLogin         DateTime?
   profile           Profile? // one-to-one with profile
   posts             Post[] // one-to-many with Post
