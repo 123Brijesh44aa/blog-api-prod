@@ -9,6 +9,8 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { generateVerificationToken } from "../utils/verificationToken.util.js";
 import { sendVerificationEmail } from "../services/sendVerificationEmail.service.js";
+import { generatePasswordResetToken } from "../utils/passwordResetToken.util.js";
+import { sendPasswordResetEmail } from "../services/sendPasswordResetEmail.service.js";
 
 
 dotenv.configDotenv();
@@ -168,7 +170,7 @@ const loginUser = async (req, res, next) => {
 
         // update the lastLogin field
         await prismaClient.user.update({
-            where : { id: user.id },
+            where: { id: user.id },
             data: { lastLogin: new Date() }
         });
 
@@ -288,51 +290,86 @@ const refreshAccessToken = async (req, res, next) => {
 
 
 
-const verifyEmail = async (req, res, next) => {
+
+
+const forgetPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        const user = await prismaClient.user.findUnique({
+            where: { email: email },
+        });
+        if (!user) {
+            return next(new BlogError("User with this email does not exist", 404));
+        }
+        const passwordResetToken = generatePasswordResetToken(user.email);
+        // update user with resetToken
+        await prismaClient.user.update({
+            where: { email: user.email },
+            data: { resetToken: passwordResetToken },
+        });
+        const updatedUserWithResetToken = await prismaClient.user.findUnique({
+            where: { id: user.id },
+        });
+        // send password reset email with reset token
+        sendPasswordResetEmail(updatedUserWithResetToken);
+        res.status(200).json({
+            message: "A password reset email has been sent to your email address."
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+const resetPassword = async (req, res, next) => {
     try {
         const token = req.params.token;
-        const decoded = jwt.verify(token, process.env.EMAIL_VERIFICATION_TOKEN_SECRET);
+        const { password, confirmPassword } = req.body;
+        if (token === null || token === undefined) {
+            return next(new BlogError("Invalid password reset link", 404));
+        }
+        if (!password || !confirmPassword) {
+            return next(new BlogError("Password and Confirm Password are required", 400));
+        }
+        if (password !== confirmPassword) {
+            return next(new BlogError("Password and Confirm Password do not match", 400));
+        }
+        // verify the resetToken
+        const decoded = jwt.verify(token, process.env.PASSWORD_RESET_TOKEN_SECRET);
         const email = decoded.email;
-
-        // find the user using email and token . 
+        // find the user using email and resetToken
         const user = await prismaClient.user.findFirst({
             where: {
                 email: email,
-                verificationToken: token
-            }
+                resetToken: token,
+            },
         });
-        if (!user) {
-            return next(new BlogError("The verification link is invalid or has expired. Please request a new verification email.", 404));
+        if (!user || user.resetToken !== token) {
+            return next(new BlogError("The password reset link is invalid or has expired. Please request a new password reset email.", 404));
         }
-        // check if token expired or not 
-        const currentTime = Date.now() / 1000;
-        if (decoded.exp < currentTime) {
-            return next(new BlogError("The verification link is invalid or has expired. Please request a new verification email.", 404));
-        }
-        // update the user record to remove the verification token and set the emailVerified field to true
+        // hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        // update the user password and resetToken
         await prismaClient.user.update({
             where: { id: user.id },
             data: {
-                verificationToken: null,
-                isVerified: true
-            }
+                password: hashedPassword,
+                resetToken: null,
+            },
         });
-
-        // Send a success response
-        res.status(200).json(
-            {
-                message: "Email verified successfully. You can now log in.",
-            }
-        )
-
-
+        // send a success response
+        res.status(200).json({
+            message: "Password reset successfully. You can now Login with your new password.",
+        });
     } catch (error) {
-        if (error instanceof jwt.TokenExpiredError) {
-            return next(new BlogError("The verification link is invalid or has expired. Please request a new verification email.", 404));
+        // handle token expired error
+        if (error.name === "TokenExpiredError"){
+            return next(new BlogError("The password reset link is invalid or has expired. Please request a new password reset email.", 404));
         }
         next(error);
     }
 }
 
 
-export { signupUser, loginUser, logoutUser, refreshAccessToken, verifyEmail };
+export { signupUser, loginUser, logoutUser, refreshAccessToken, forgetPassword , resetPassword};
